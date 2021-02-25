@@ -1,5 +1,8 @@
 import tensorflow as tf
 from tensorflow.keras.layers import  Layer
+import numpy as np
+import tensorflow.keras.backend as K
+import math
 
 class PositionWiseFeedForward(Layer):
     def __init__(self, model_dim, inner_dim, trainable=True, **kwargs):
@@ -66,9 +69,10 @@ class EncoderLayer(tf.keras.Model):
         pass
 
 class PositionalEncoding(Layer):
-    def __init__(self, d_model):
+    def __init__(self, d_model, max_len):
         super(PositionalEncoding, self).__init__()
         self.d_model = d_model
+        self.max_len = max_len
 
     def build(self, input_shape):
         self.pos_encoding = self.add_weight(shape=(input_shape[0],self.d_model),
@@ -76,9 +80,17 @@ class PositionalEncoding(Layer):
                                        name='pos_encoding',
                                        trainable=False)
 
+        self.position = K.expand_dims(K.arange(0,self.max_len,dtype=tf.float32),1)
+        self.div_term = K.exp(K.arange(0,self.d_model, 2,dtype='float32') * (np.log(10000.0) / self.d_model))
+        self.pos_encoding[:,0::2] = K.sin(self.position * self.div_term)
+        self.pos_encoding[:,1::2] = K.cos(self.position * self.div_term)
+        self.pos_encoding = K.transpose(K.expand_dims(self.pos_encoding,0))
 
     def call(self, inputs, **kwargs):
-        pass
+        inputs = inputs + self.pos_encoding[:inputs.shape[0], :]
+        return inputs
+
+
 
 
 
